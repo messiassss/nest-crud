@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post } from '@nestjs/common';
 import { AppService } from './app.service';
 import { UserService } from './service/user.service';
 import { UserDto } from './dto/user.dto';
@@ -14,8 +14,6 @@ export class AppController {
     return this.appService.getHello();
   }
 
-
-
   @Post('create')
   async create(@Body() createUserDto: CreateUserDto): Promise<UserDto> {
    
@@ -23,9 +21,27 @@ export class AppController {
   }
 
 
-  @Get(':cpf')
+  @Get('user/:cpf')
   async getUser(@Param('cpf') cpf: string): Promise<UserDto> {
-    console.log(cpf)
+  
     return this.userService.getUserByCpf(cpf);
+  }
+
+
+  @Delete('all')
+  async deleteAll(): Promise<String> {
+    return this.userService.deleteAll();
+  }
+
+
+  @Delete('user/:cpf')
+  async deleteByCpf(@Param('cpf') cpf: string): Promise<String>{
+    return this.userService.deleteByCpf(cpf);
+  }
+
+
+  @Get('all')
+  async getAll(): Promise<UserDto[]> {
+    return this.userService.getAllUsers();
   }
 }

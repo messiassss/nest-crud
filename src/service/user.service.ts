@@ -1,82 +1,51 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, HttpException, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { lastValueFrom } from 'rxjs';
-import { AddressDto } from 'src/dto/address.dto';
+import { AddressDto } from '../dto/address.dto';
 import { CreateUserDto } from 'src/dto/create-user.dto';
-import { UserDto } from 'src/dto/user.dto';
-import { User } from 'src/entity/entities';
-import { Repository } from 'typeorm';
+import { UserDto } from '../dto/user.dto';
+import { User } from '../entity/entities';
+import { UserRepository } from '../repository/user.repository';
+
 
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
+    private readonly userRepository: UserRepository,
     private readonly httpService: HttpService
   ) { }
 
 
-  async createUser(userData: CreateUserDto): Promise<UserDto> {
-
+  async createUser(userData: CreateUserDto): Promise<User> {
     const url = `https://viacep.com.br/ws/${userData.cep}/json/`;
     let responseCEP;
 
     try {
-      responseCEP = await lastValueFrom(this.httpService.get(url));
+      responseCEP = await this.httpService.axiosRef.get(url);
 
       if (responseCEP.status !== 200) {
-        throw new Error(`Erro ao consultar o CEP na API VIA-CEP: ${responseCEP.status}`);
+        throw new HttpException(`Erro ao consultar o CEP na API VIA-CEP: ${responseCEP.status}`, 500);
       }
 
     } catch (error) {
-    
-      throw new HttpException('Verifique a disponibilidade da API.', 500);
+      throw new HttpException('Verifique a disponibilidade da API de CEP.', 500);
     }
 
+    const userDb = await this.userRepository.findByCpf(userData.cpf);
 
-    //Veriicar se o usuario ja existe 
-    try {
-      const user: UserDto = await this.getUserByCpf(userData.cpf, true)
-
-      if (user) {
-  
-        throw new Error("Já existe um usuario com esse CPF "+userData.cpf);
-      }
-    } catch (error) {
-
-      throw new HttpException('Erro durante a verificação de usuário ' + error, 500);
+    if (userDb) {
+      throw new HttpException('Usuário já existe com esse CPF.', 500);
     }
 
-
-
-    //Settando o retorno dos dados do cep     
-    let newUser: UserDto = this.setUserDataBase(userData);
-
-    this.setNewUserAddress(newUser, responseCEP.data);
-
-
-    //Salvando no banco
-
-    let userEntity;
-    try {
-
-      userEntity = await this.userRepository.create(newUser);
-      await this.userRepository.save(userEntity);
-
-    }
-    catch (error) {
-      throw new HttpException('Erro ao criar e salvar entidade no banco: ' + error, 500);
-    }
-
-    return userEntity;
-
+    const newUser = await this.userRepository.createUser(userData, responseCEP.data);
+    return newUser;
   }
 
-  async getUserByCpf(cpf: string, verify = false): Promise<UserDto> {
 
-    const user: UserDto = await this.userRepository.findOne({ where: { cpf } });
+
+  async getUserByCpf(cpf: string, verify = false): Promise<UserDto> {
+ 
+    const user = await this.userRepository.findByCpf(cpf);
 
     if (verify) {
       return user;
@@ -91,26 +60,40 @@ export class UserService {
   }
 
 
+  async getAllUsers(): Promise<UserDto[]> {
+    
+    const users: UserDto[] = await this.userRepository.getAllUsers();
 
+    if (!users) {
+      throw new NotFoundException('Não foi encontrado nenhum usuario');
+    }
 
-  private setNewUserAddress(user: UserDto, data: any) {
-
-    user.address.street = data.logradouro;
-    user.address.city = data.uf;
-    user.address.state = data.estado;
+    return users;
 
   }
 
-  private setUserDataBase(user: any): any {
-    let newUser: UserDto = new UserDto();
-    newUser.address = new AddressDto();
 
-    newUser.cpf = user.cpf;
-    newUser.address.cep = user.cep;
-    newUser.address.houseNumber = user.houseNumber;
+  async deleteByCpf(cpf: string): Promise<String>  {
 
-    return newUser;
+    try {
+      await this.userRepository.deleteByCpf(cpf);
+      return 'Foi deletado com sucesso o usuario com o CPF: '+cpf;
+    } catch (error) {
+      throw new HttpException('Erro inesperado durante a tentativa de deletar o usuario com o cpf: '+cpf, 500);
+    }
   }
+
+  async deleteAll(): Promise<String>  {
+
+    try {
+      await this.userRepository.deleteAllUsers();
+      return 'Todos os usuarios deletados com sucesso';
+    } catch (error) {
+      throw new HttpException('Erro inesperado durante o metodo de deletar todos os usuarios', 500);
+    }
+
+  }
+
 
 
   private converterDbUser(user: any): any {

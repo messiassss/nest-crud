@@ -6,6 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Address, User } from './entity/entities';
 import { UserService } from './service/user.service';
 import { HttpModule } from '@nestjs/axios';
+import { UserRepository } from './repository/user.repository';
 
 @Module({
   imports: [ViaCepModule,
@@ -19,6 +20,6 @@ import { HttpModule } from '@nestjs/axios';
     TypeOrmModule.forFeature([User]), 
   ],
   controllers: [AppController],
-  providers: [AppService,UserService],
+  providers: [AppService,UserService,UserRepository],
 })
 export class AppModule { }
