@@ -1,5 +1,5 @@
 import { Repository } from 'typeorm';
-import { User } from '../entity/entities';
+import { User } from '../entity/user';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { Injectable } from '@nestjs/common';
 import { UserDto } from '../dto/user.dto';
@@ -20,13 +20,13 @@ export class UserRepository {
     return await this.userRepository.findOne({ where: { cpf } });
   }
 
-  async createUser(userData: CreateUserDto, cepData: any): Promise<User> {
+  async createUser( user:UserDto): Promise<User> {
   
-    const newUser: UserDto = this.setUserDataBase(userData);
+    // const newUser: UserDto = this.setUserDataBase(userData);
     
-    this.setNewUserAddress(newUser, cepData);
+    // this.setNewUserAddress(newUser, cepData);
 
-    const userEntity = this.userRepository.create(newUser);
+    const userEntity = this.userRepository.create(user);
      return await this.userRepository.save(userEntity);
   }
 

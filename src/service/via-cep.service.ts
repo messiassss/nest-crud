@@ -6,7 +6,7 @@ import { lastValueFrom } from 'rxjs';
 export class ViaCepService {
   constructor(private readonly httpService: HttpService) {}
 
-  async buscarCep(cep: string): Promise<any> {
+  async searchCep(cep: string): Promise<any> {
     const url = `https://viacep.com.br/ws/${cep}/json/`;
     const response = await lastValueFrom(this.httpService.get(url));
     return response.data;

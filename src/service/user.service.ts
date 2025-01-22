@@ -1,10 +1,12 @@
-import { HttpService } from '@nestjs/axios';
-import { Injectable, HttpException, NotFoundException } from '@nestjs/common';
+
+import { Injectable, HttpException, NotFoundException, HttpStatus } from '@nestjs/common';
 import { AddressDto } from '../dto/address.dto';
 import { CreateUserDto } from 'src/dto/create-user.dto';
 import { UserDto } from '../dto/user.dto';
-import { User } from '../entity/entities';
+import { User } from '../entity/user';
 import { UserRepository } from '../repository/user.repository';
+import { ViaCepService } from './via-cep.service';
+import { UserMapperService } from './user-mapper.service';
 
 
 
@@ -12,33 +14,38 @@ import { UserRepository } from '../repository/user.repository';
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly httpService: HttpService
+    private readonly viaCepService: ViaCepService,
+    private readonly userMapperService: UserMapperService
   ) { }
 
 
   async createUser(userData: CreateUserDto): Promise<User> {
-    const url = `https://viacep.com.br/ws/${userData.cep}/json/`;
-    let responseCEP;
+
+    let responseCep;
 
     try {
-      responseCEP = await this.httpService.axiosRef.get(url);
+      responseCep = await this.viaCepService.searchCep(userData.cep)
 
-      if (responseCEP.status !== 200) {
-        throw new HttpException(`Erro ao consultar o CEP na API VIA-CEP: ${responseCEP.status}`, 500);
+      if (responseCep.status !== 200) {
+        throw new Error();
       }
 
     } catch (error) {
-      throw new HttpException('Verifique a disponibilidade da API de CEP.', 500);
+      throw new HttpException('Verifique a disponibilidade da API de CEP.', 402);
     }
 
     const userDb = await this.userRepository.findByCpf(userData.cpf);
 
     if (userDb) {
-      throw new HttpException('Usuário já existe com esse CPF.', 500);
+      throw new HttpException('Usuário já existe com esse CPF.', 402);
     }
 
-    const newUser = await this.userRepository.createUser(userData, responseCEP.data);
-    return newUser;
+
+    const newUser: UserDto = this.userMapperService.setUserDataBase(userData);
+    this.userMapperService.setNewUserAddress(newUser, responseCep.data);
+   
+    return await this.userRepository.createUser(newUser);
+
   }
 
 
@@ -56,7 +63,7 @@ export class UserService {
     }
 
 
-    return this.converterDbUser(user);
+    return this.userMapperService.convertDbUser(user);
   }
 
 
@@ -64,10 +71,7 @@ export class UserService {
     
     const users: UserDto[] = await this.userRepository.getAllUsers();
 
-    if (!users) {
-      throw new NotFoundException('Não foi encontrado nenhum usuario');
-    }
-
+ 
     return users;
 
   }
@@ -77,9 +81,9 @@ export class UserService {
 
     try {
       await this.userRepository.deleteByCpf(cpf);
-      return 'Foi deletado com sucesso o usuario com o CPF: '+cpf;
+      throw new HttpException('Usuario deletado com sucesso', 204);
     } catch (error) {
-      throw new HttpException('Erro inesperado durante a tentativa de deletar o usuario com o cpf: '+cpf, 500);
+      throw new HttpException('Erro inesperado durante a tentativa de deletar o usuario com o cpf: '+cpf, 402);
     }
   }
 
@@ -87,9 +91,9 @@ export class UserService {
 
     try {
       await this.userRepository.deleteAllUsers();
-      return 'Todos os usuarios deletados com sucesso';
+      throw new HttpException('Usuarios deletados com sucesso', 204);
     } catch (error) {
-      throw new HttpException('Erro inesperado durante o metodo de deletar todos os usuarios', 500);
+      throw new HttpException('Erro inesperado durante o metodo de deletar todos os usuarios', 402);
     }
 
   }

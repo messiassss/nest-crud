@@ -7,7 +7,6 @@ export class ViaCepController {
 
   @Get(':cep')
   async getCep(@Param('cep') cep: string) {
-    console.log("aqui")
-    return this.viaCepService.buscarCep(cep);
+    return this.viaCepService.searchCep(cep);
   }
 }

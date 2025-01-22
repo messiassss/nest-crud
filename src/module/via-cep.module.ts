@@ -4,7 +4,7 @@ import { ViaCepController } from 'src/controller/via-cep.controller';
 import { ViaCepService } from 'src/service/via-cep.service';
 
 @Module({
-  imports: [HttpModule],  // Importando o HttpModule para requisições HTTP
+  imports: [HttpModule],  
   controllers: [ViaCepController],
   providers: [ViaCepService],
 })

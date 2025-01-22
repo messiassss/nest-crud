@@ -1,4 +1,4 @@
-import { Entity, PrimaryColumn, Column  } from 'typeorm';
+import { Column  } from 'typeorm';
 
 
 export class Address {
@@ -17,13 +17,3 @@ export class Address {
   @Column()
   state: string;
 }
-
-@Entity()
-export class User {
-  @PrimaryColumn()
-  cpf: string;
-
-  @Column(() => Address)
-  address: Address;
-}
-
