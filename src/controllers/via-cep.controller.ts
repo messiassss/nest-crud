@@ -1,5 +1,5 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import { ViaCepService } from 'src/service/via-cep.service';
+import { ViaCepService } from 'src/services/via-cep.service';
 
 @Controller('cep')
 export class ViaCepController {
